@@ -1,10 +1,10 @@
 ﻿:root {
-  --gutter: 5vmin; /* 逕ｻ髱｢蜈ｨ菴薙・5%逶ｸ蠖薙・菴咏區 */
+  --gutter: 5vmin; /* ガター間隔（上下左右の余白）を5vminに設定 */
   --bg: #0a0a0a;
   --white: #ffffff;
   --muted: #c8c8c8;
   --accent: #3ba0ff;
-  --timer-height: 84px; /* 繝励Ο繧ｰ繝ｬ繧ｹ・区桃菴懆｡後・諠ｳ螳夐ｫ倥＆ */
+  --timer-height: 84px; /* タイマーの高さ（上部バーの高さ） */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
