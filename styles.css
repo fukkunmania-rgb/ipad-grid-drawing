@@ -50,6 +50,8 @@ body.freeze { position: fixed; width: 100%; }
 }
 .controls { justify-content: flex-start; }
 .time-ctrls { justify-content: space-between; }
+/* フォーム系は操作を許可（ダブルタップズームは抑止されるが操作は可能）*/
+.topbar, .controls, .feedback-toolbar { touch-action: manipulation; }
 
 label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
 input[type="number"], select, input[type="range"] {
@@ -161,7 +163,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
   height: 100%;
   border-radius: 10px;
 }
-#fbA { opacity: 0.5; background: #fff; filter: grayscale(100%); }
+#fbA { opacity: 0.35; background: #fff; }
 #fbB { background: transparent; mix-blend-mode: multiply; }
 /* フィードバック全体もズームを起こさない */
 .feedback { touch-action: none; }
@@ -193,4 +195,22 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 @media (orientation: landscape) {
   .workspace { flex-direction: row; }
 }
+/* 参照キャンバス用ツール（グレースケール切替） */
+.pane-toolbox {
+  position: absolute;
+  top: -28px; /* Referenceラベルの下辺と揃える（キャンバス外） */
+  left: 120px; /* Referenceラベルの右側に配置 */
+  z-index: 6;
+  background: transparent; /* 縁取り・背景なし */
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0; /* 余白も除去 */
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pane#paneA, #paneA { overflow: visible; }
+.pane-toolbox input[type="checkbox"] { width: 18px; height: 18px; }
 

@@ -41,6 +41,10 @@
           </select>
         </label>
         <label>
+          補助グリッド
+          <input type="checkbox" id="subGrid" />
+        </label>
+        <label>
           グリッド太さ
           <input type="range" id="gridWidth" min="1" max="8" step="1" value="4" />
         </label>
@@ -54,6 +58,9 @@
 
     <main class="workspace" id="workspace">
       <section class="pane" id="paneA" aria-label="参照キャンバス">
+        <div class="pane-toolbox">
+          <label><input type="checkbox" id="refGray" /> グレースケール</label>
+        </div>
         <canvas id="canvasA" width="1448" height="2048"></canvas>
         <div class="pane-label" aria-hidden="true">Reference</div>
       </section>
@@ -67,8 +74,8 @@
 
     <section class="feedback" id="feedback" hidden aria-modal="true" role="dialog">
       <div class="feedback-toolbar">
-        <label class="opacity-ctrl">A透明度
-          <input type="range" id="aOpacity" min="0" max="100" step="1" value="50" />
+        <label class="opacity-ctrl">リファレンス透明度
+          <input type="range" id="aOpacity" min="0" max="100" step="1" value="35" />
         </label>
         <button id="saveBtn">縮小PNG保存（縦720px）</button>
         <button id="resetBtn">リセットして再開</button>

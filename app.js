@@ -29,6 +29,8 @@
   const refFile = document.getElementById('refFile');
   const gridDivSelect = document.getElementById('gridDiv');
   const gridWidthInput = document.getElementById('gridWidth');
+  const subGridCheckbox = document.getElementById('subGrid');
+  const refGrayCb = document.getElementById('refGray');
   const penSize = document.getElementById('penSize');
   const clearBtn = document.getElementById('clearBtn');
   const lockedMsg = document.getElementById('lockedMsg');
@@ -54,7 +56,9 @@
   let locked = false;
   let lastX = 0, lastY = 0;
   let fbViewMode = 'overlay'; // 互換用（デフォルトは常にA+B）
-  let aOpacity = (aOpacityInput ? parseInt(aOpacityInput.value, 10) : 50) / 100; // 0..1
+  let aOpacity = (aOpacityInput ? parseInt(aOpacityInput.value, 10) : 35) / 100; // 0..1
+  let showSubGrid = !!(subGridCheckbox && subGridCheckbox.checked);
+  let refGray = !!(refGrayCb && refGrayCb.checked);
 
   // タイマー
   let timerId = null;
@@ -120,6 +124,35 @@
       ctx.strokeStyle = 'rgba(0,0,0,0.5)';
       const o = offset;
       ctx.strokeRect(o, o, IW - 1 - (o ? 0 : 1), IH - 1 - (o ? 0 : 1));
+
+      // 補助グリッド（各マスの中央に破線）
+      if (showSubGrid) {
+        const subStep = s / 2;
+        const subWidth = Math.max(1, gridLineWidth - 3);
+        const subOffset = (subWidth % 2 === 1) ? 0.5 : 0;
+        ctx.lineWidth = subWidth;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        // 縦線: subStepごと、メイングリッド位置（偶数倍）は除外
+        for (let i = 1; i < n * 2; i += 2) {
+          const x = Math.round(subStep * i) + subOffset;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, IH);
+          ctx.stroke();
+        }
+        // 横線
+        for (let i = 1; i < Math.floor(IH / subStep) * 1; i++) {
+          const y = subStep * i;
+          if (Math.abs((y / s) - Math.round(y / s)) < 1e-6) continue; // メイン線は除外
+          const yy = Math.round(y) + subOffset;
+          ctx.beginPath();
+          ctx.moveTo(0, yy);
+          ctx.lineTo(IW, yy);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
     }
     ctx.restore();
   }
@@ -130,15 +163,44 @@
     ctxA.fillStyle = '#ffffff';
     ctxA.fillRect(0,0, IW, IH);
     if (refImage && refImage.complete) {
-      const ir = refImage.naturalHeight / refImage.naturalWidth;
-      let dw = IW, dh = IW * ir;
-      if (dh > IH) { dh = IH; dw = dh / ir; }
-      const dx = (IW - dw) / 2;
-      const dy = (IH - dh) / 2;
-      ctxA.drawImage(refImage, dx, dy, dw, dh);
+      drawRefTo(ctxA, refGray);
     }
     drawGridLines(ctxA, gridDivisions);
     ctxA.restore();
+  }
+
+  // 参照画像を描画（グレースケール対応）
+  function drawRefTo(ctx, gray) {
+    const ir = refImage.naturalHeight / refImage.naturalWidth;
+    let dw = IW, dh = IW * ir;
+    if (dh > IH) { dh = IH; dw = dh / ir; }
+    const dx = (IW - dw) / 2;
+    const dy = (IH - dh) / 2;
+    if (gray) {
+      if ('filter' in ctx) {
+        ctx.filter = 'grayscale(100%)';
+        ctx.drawImage(refImage, dx, dy, dw, dh);
+        ctx.filter = 'none';
+      } else {
+        const off = document.createElement('canvas');
+        off.width = Math.max(1, Math.round(dw));
+        off.height = Math.max(1, Math.round(dh));
+        const octx = off.getContext('2d');
+        octx.drawImage(refImage, 0, 0, off.width, off.height);
+        try {
+          const img = octx.getImageData(0, 0, off.width, off.height);
+          const d = img.data;
+          for (let i = 0; i < d.length; i += 4) {
+            const y = (0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2])|0;
+            d[i] = d[i+1] = d[i+2] = y;
+          }
+          octx.putImageData(img, 0, 0);
+        } catch (_) {}
+        ctx.drawImage(off, dx, dy, dw, dh);
+      }
+    } else {
+      ctx.drawImage(refImage, dx, dy, dw, dh);
+    }
   }
 
   function drawGridB() {
@@ -387,6 +449,16 @@
     drawCanvasA();
     drawGridB();
   });
+  if (subGridCheckbox) subGridCheckbox.addEventListener('change', () => {
+    showSubGrid = !!subGridCheckbox.checked;
+    drawCanvasA();
+    drawGridB();
+  });
+  if (refGrayCb) refGrayCb.addEventListener('change', () => {
+    refGray = !!refGrayCb.checked;
+    drawCanvasA();
+    if (!feedbackSec.hidden) renderFeedbackOverlay();
+  });
   if (clearBtn) clearBtn.addEventListener('click', clearCanvasB);
   if (refFile) refFile.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
@@ -408,9 +480,12 @@
   // ジェスチャ抑止（ダブルタップ拡大など）
   window.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+  window.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  window.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
   window.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
   let lastTapTs = 0;
   const isInteractive = (el) => !!(el && el.closest && el.closest('input, select, textarea, button, a, label'));
+  const inWorkspace = (el) => !!(el && el.closest && (el.closest('.workspace') || el.closest('.feedback')));
   const doubleTapBlocker = (e) => {
     // 入力系はスルー（数値入力やスライダーの操作を阻害しない）
     if (isInteractive(e.target)) return;
@@ -428,6 +503,18 @@
   // 画面全体でダブルタップを抑止（指・Apple Pencilを問わず）
   document.addEventListener('touchend', doubleTapBlocker, { passive: false, capture: true });
   document.addEventListener('pointerup', doubleTapBlocker, { passive: false, capture: true });
+
+  // 非ペンのタッチはワークスペースでは全面ブロック（厳格パームリジェクション）
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch' && inWorkspace(e.target) && !isInteractive(e.target)) {
+      e.preventDefault(); e.stopPropagation();
+    }
+  }, { passive: false, capture: true });
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch' && inWorkspace(e.target) && !isInteractive(e.target)) {
+      e.preventDefault(); e.stopPropagation();
+    }
+  }, { passive: false, capture: true });
 
   // タブ切替や画面遷移などでも安全に終了
   window.addEventListener('blur', () => { drawing = false; });
