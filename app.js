@@ -339,11 +339,14 @@
     ev.preventDefault(); ev.stopPropagation();
     const [x,y] = toCanvasCoords(ev.clientX, ev.clientY);
     penDown(x,y);
+    try { canvasB.setPointerCapture && canvasB.setPointerCapture(ev.pointerId); } catch (_) {}
   }
   function handlePointerMove(ev) {
     if (!drawing) return;
     if (ev.pointerType && ev.pointerType !== 'pen') return;
     ev.preventDefault(); ev.stopPropagation();
+    // まれにpointerupが失われた場合に備えて、押下状態を確認
+    if (ev.buttons === 0) { penUp(); return; }
     const [x,y] = toCanvasCoords(ev.clientX, ev.clientY);
     penMove(x,y);
   }
@@ -351,11 +354,14 @@
     if (ev.pointerType && ev.pointerType !== 'pen') return;
     ev.preventDefault(); ev.stopPropagation();
     penUp();
+    try { canvasB.releasePointerCapture && canvasB.releasePointerCapture(ev.pointerId); } catch (_) {}
   }
   canvasB.addEventListener('pointerdown', handlePointerDown, { passive: false });
   window.addEventListener('pointermove', handlePointerMove, { passive: false });
   window.addEventListener('pointerup', handlePointerUp, { passive: false });
   window.addEventListener('pointercancel', handlePointerUp, { passive: false });
+  window.addEventListener('pointerleave', handlePointerUp, { passive: false });
+  window.addEventListener('pointerout', handlePointerUp, { passive: false });
 
   // UIイベント
   if (startBtn) startBtn.addEventListener('click', () => {
@@ -396,15 +402,33 @@
     if (fbA) fbA.style.opacity = String(aOpacity);
   });
 
-  // ジェスチャ抑止
+  // ジェスチャ抑止（ダブルタップ拡大など）
   window.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
   window.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
-  let lastTouchEnd = 0;
-  window.addEventListener('touchend', (e) => {
+  let lastTapTs = 0;
+  const isInteractive = (el) => !!(el && el.closest && el.closest('input, select, textarea, button, a, label'));
+  const doubleTapBlocker = (e) => {
+    // 入力系はスルー（数値入力やスライダーの操作を阻害しない）
+    if (isInteractive(e.target)) return;
+    // Apple Pencilのpointer系はブロックしない
+    if (e.pointerType && e.pointerType === 'pen') return;
+    // 描画中はブロックしない（penUpが届かなくなるのを防ぐ）
+    if (drawing) return;
     const now = Date.now();
-    if (now - lastTouchEnd <= 300) { e.preventDefault(); }
-    lastTouchEnd = now;
-  }, { passive: false });
+    if (now - lastTapTs <= 350) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    lastTapTs = now;
+  };
+  // 画面全体でダブルタップを抑止（指・Apple Pencilを問わず）
+  document.addEventListener('touchend', doubleTapBlocker, { passive: false, capture: true });
+  document.addEventListener('pointerup', doubleTapBlocker, { passive: false, capture: true });
+
+  // タブ切替や画面遷移などでも安全に終了
+  window.addEventListener('blur', () => { drawing = false; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) drawing = false; });
 
   // 初期化
   function init() {

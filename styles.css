@@ -1,14 +1,14 @@
-:root {
-  --gutter: 5vmin; /* 画面全体の5%相当の余白 */
+﻿:root {
+  --gutter: 5vmin; /* 逕ｻ髱｢蜈ｨ菴薙・5%逶ｸ蠖薙・菴咏區 */
   --bg: #0a0a0a;
   --white: #ffffff;
   --muted: #c8c8c8;
   --accent: #3ba0ff;
-  --timer-height: 84px; /* プログレス＋操作行の想定高さ */
+  --timer-height: 84px; /* 繝励Ο繧ｰ繝ｬ繧ｹ・区桃菴懆｡後・諠ｳ螳夐ｫ倥＆ */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; overscroll-behavior: none; touch-action: manipulation; }
+html, body { height: 100%; overscroll-behavior: none; touch-action: none; }
 body {
   margin: 0;
   background: var(--bg);
@@ -16,8 +16,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
   padding: env(safe-area-inset-top) var(--gutter) env(safe-area-inset-bottom) var(--gutter);
   user-select: none;
-  -webkit-user-select: none; /* iOSテキスト選択抑止 */
-  -webkit-touch-callout: none; /* 長押しのコールアウト無効化 */
+  -webkit-user-select: none; /* iOS繝・く繧ｹ繝磯∈謚樊椛豁｢ */
+  -webkit-touch-callout: none; /* 髟ｷ謚ｼ縺励・繧ｳ繝ｼ繝ｫ繧｢繧ｦ繝育┌蜉ｹ蛹・*/
 }
 body.freeze { position: fixed; width: 100%; }
 
@@ -33,7 +33,7 @@ body.freeze { position: fixed; width: 100%; }
   height: 12px;
   background: #222;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible; /* ラベルを外側に表示するため */
 }
 .progress {
   height: 100%;
@@ -69,7 +69,7 @@ button, .file-btn {
 }
 button:hover, .file-btn:hover { border-color: var(--accent); }
 
-.file-btn { position: relative; overflow: hidden; }
+.file-btn { position: relative; overflow: visible; /* ラベルを外側に表示するため */ }
 .file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
 .workspace {
@@ -81,27 +81,45 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
   align-items: center;
 }
 
-/* 各ペインの見た目 */
+/* 蜷・・繧､繝ｳ縺ｮ隕九◆逶ｮ */
 .pane {
   position: relative;
   background: #111;
   border-radius: 10px;
-  overflow: hidden;
-  /* JSで幅・高さは調整、比率はA4縦 */
+  overflow: visible; /* ラベルを外側に表示するため */
+  /* JS縺ｧ蟷・・鬮倥＆縺ｯ隱ｿ謨ｴ縲∵ｯ皮紫縺ｯA4邵ｦ */
   aspect-ratio: 1448 / 2048;
 }
 .pane, .pane canvas {
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: none; /* Apple Pencil向け（スクロール抑止） */
+  touch-action: none; /* Apple Pencil蜷代￠・医せ繧ｯ繝ｭ繝ｼ繝ｫ謚第ｭ｢・・*/
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-/* 実描画キャンバスのみ白背景。グリッドレイヤは透明にする */
+/* 螳滓緒逕ｻ繧ｭ繝｣繝ｳ繝舌せ縺ｮ縺ｿ逋ｽ閭梧勹縲ゅげ繝ｪ繝・ラ繝ｬ繧､繝､縺ｯ騾乗・縺ｫ縺吶ｋ */
 #canvasA, #canvasB { background: var(--white); }
 .pane { touch-action: none; }
 .grid-layer { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent !important; pointer-events: none; }
+
+/* 繧ｭ繝｣繝ｳ繝舌せ繝ｩ繝吶Ν */
+.pane-label {
+  position: absolute;
+  top: -28px; /* キャンバスの外側 */
+  left: 10px;
+  z-index: 5;
+  pointer-events: none;
+  user-select: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+#paneB .pane-label { left: auto; right: 10px; }
 
 .overlay-msg {
   position: absolute;
@@ -113,11 +131,11 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 }
 .overlay-msg[hidden] { display: none !important; }
 
-/* フィードバックは全画面オーバーレイ */
+/* 繝輔ぅ繝ｼ繝峨ヰ繝・け縺ｯ蜈ｨ逕ｻ髱｢繧ｪ繝ｼ繝舌・繝ｬ繧､ */
 .feedback {
   position: fixed;
   inset: 0;
-  background: #fff; /* 黒から白背景へ */
+  background: #fff; /* 鮟偵°繧臥區閭梧勹縺ｸ */
   display: none;
   z-index: 1000;
 }
@@ -130,7 +148,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
   background: #fff;
   border-radius: 10px;
 }
-/* スタック表示（AとBを重ねて表示） */
+/* 繧ｹ繧ｿ繝・け陦ｨ遉ｺ・・縺ｨB繧帝㍾縺ｭ縺ｦ陦ｨ遉ｺ・・*/
 .feedback-body .stack {
   position: relative;
   width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048));
@@ -145,7 +163,17 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 }
 #fbA { opacity: 0.5; background: #fff; filter: grayscale(100%); }
 #fbB { background: transparent; mix-blend-mode: multiply; }
-/* フィードバック操作ボタンは画面上部に固定 */
+/* フィードバック全体もズームを起こさない */
+.feedback { touch-action: none; }
+/* タイマーバーとカウントダウンを同列・同高さに */
+.timer-bar-row { display: flex; align-items: center; gap: 12px; }
+.progress-wrap { height: 16px; }
+.countdown { min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; height: 16px; line-height: 16px; }
+/* 主要アクション（スタート/ギブアップ）を大きく */
+#startBtn, #giveUpBtn { font-size: 16px; padding: 10px 18px; height: 42px; border-width: 2px; }
+#startBtn { border-color: #2ecc71; }
+#giveUpBtn { border-color: #e67e22; }
+/* 繝輔ぅ繝ｼ繝峨ヰ繝・け謫堺ｽ懊・繧ｿ繝ｳ縺ｯ逕ｻ髱｢荳企Κ縺ｫ蝗ｺ螳・*/
 .feedback-ctrls, .feedback-toolbar {
   position: fixed;
   top: calc(env(safe-area-inset-top) + 8px);
@@ -158,10 +186,11 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
   z-index: 1001;
 }
 
-/* 方向によって並びを変更（JSはサイズ計算のみ）*/
+/* 譁ｹ蜷代↓繧医▲縺ｦ荳ｦ縺ｳ繧貞､画峩・・S縺ｯ繧ｵ繧､繧ｺ險育ｮ励・縺ｿ・・/
 @media (orientation: portrait) {
   .workspace { flex-direction: column; }
 }
 @media (orientation: landscape) {
   .workspace { flex-direction: row; }
 }
+
