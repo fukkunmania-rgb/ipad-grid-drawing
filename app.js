@@ -406,6 +406,19 @@
   window.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
   window.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+  // ピンチズームを広く抑止（iPadOS 14+ の wheel+ctrl も含む）
+  window.addEventListener('wheel', (e) => { if (e.ctrlKey) { e.preventDefault(); e.stopPropagation(); } }, { passive: false, capture: true });
+  // パームリジェクション: マルチタッチや描画中のTouchは全面的に無効化
+  const palmBlocker = (e) => {
+    // 入力系は許可
+    if (isInteractive(e.target)) return;
+    // 2本指以上 → ピンチズーム抑止
+    if (e.touches && e.touches.length > 1) { e.preventDefault(); e.stopPropagation(); return; }
+    // 描画中は手のひらなどのTouchを無効化
+    if (drawing) { e.preventDefault(); e.stopPropagation(); }
+  };
+  document.addEventListener('touchstart', palmBlocker, { passive: false, capture: true });
+  document.addEventListener('touchmove', palmBlocker, { passive: false, capture: true });
   let lastTapTs = 0;
   const isInteractive = (el) => !!(el && el.closest && el.closest('input, select, textarea, button, a, label'));
   const doubleTapBlocker = (e) => {
@@ -429,6 +442,29 @@
   // タブ切替や画面遷移などでも安全に終了
   window.addEventListener('blur', () => { drawing = false; });
   document.addEventListener('visibilitychange', () => { if (document.hidden) drawing = false; });
+
+  // まれにズームがかかって戻らない場合に、viewportを再適用して強制的に戻す
+  const metaViewport = document.querySelector('meta[name="viewport"]');
+  function resetViewport() {
+    if (!metaViewport) return;
+    const content = 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimum-scale=1';
+    metaViewport.setAttribute('content', content);
+  }
+  if (window.visualViewport) {
+    let zoomTimer = null;
+    const onVVChange = () => {
+      try {
+        const s = window.visualViewport.scale || 1;
+        if (s && Math.abs(s - 1) > 0.01) {
+          // 少し待っても戻らない場合にリセット
+          if (zoomTimer) clearTimeout(zoomTimer);
+          zoomTimer = setTimeout(() => { resetViewport(); }, 250);
+        }
+      } catch (_) {}
+    };
+    window.visualViewport.addEventListener('resize', onVVChange);
+    window.visualViewport.addEventListener('scroll', onVVChange);
+  }
 
   // 初期化
   function init() {
