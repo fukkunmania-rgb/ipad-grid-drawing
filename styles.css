@@ -1,0 +1,167 @@
+:root {
+  --gutter: 5vmin; /* 画面全体の5%相当の余白 */
+  --bg: #0a0a0a;
+  --white: #ffffff;
+  --muted: #c8c8c8;
+  --accent: #3ba0ff;
+  --timer-height: 84px; /* プログレス＋操作行の想定高さ */
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overscroll-behavior: none; touch-action: manipulation; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--white);
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+  padding: env(safe-area-inset-top) var(--gutter) env(safe-area-inset-bottom) var(--gutter);
+  user-select: none;
+  -webkit-user-select: none; /* iOSテキスト選択抑止 */
+  -webkit-touch-callout: none; /* 長押しのコールアウト無効化 */
+}
+body.freeze { position: fixed; width: 100%; }
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: var(--gutter);
+}
+
+.progress-wrap {
+  width: 100%;
+  height: 12px;
+  background: #222;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2ecc71, #f1c40f, #e67e22, #e74c3c);
+  transition: width 0.1s linear;
+}
+
+.time-ctrls, .controls, .feedback-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.controls { justify-content: flex-start; }
+.time-ctrls { justify-content: space-between; }
+
+label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+input[type="number"], select, input[type="range"] {
+  background: #151515;
+  color: var(--white);
+  border: 1px solid #2a2a2a;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+button, .file-btn {
+  background: #1e1e1e;
+  color: var(--white);
+  border: 1px solid #333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:hover, .file-btn:hover { border-color: var(--accent); }
+
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.workspace {
+  display: flex;
+  gap: var(--gutter);
+  width: 100%;
+  height: calc(100vh - var(--gutter) * 2 - var(--timer-height));
+  justify-content: center;
+  align-items: center;
+}
+
+/* 各ペインの見た目 */
+.pane {
+  position: relative;
+  background: #111;
+  border-radius: 10px;
+  overflow: hidden;
+  /* JSで幅・高さは調整、比率はA4縦 */
+  aspect-ratio: 1448 / 2048;
+}
+.pane, .pane canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none; /* Apple Pencil向け（スクロール抑止） */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+/* 実描画キャンバスのみ白背景。グリッドレイヤは透明にする */
+#canvasA, #canvasB { background: var(--white); }
+.pane { touch-action: none; }
+.grid-layer { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent !important; pointer-events: none; }
+
+.overlay-msg {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.35);
+  font-weight: 600;
+}
+.overlay-msg[hidden] { display: none !important; }
+
+/* フィードバックは全画面オーバーレイ */
+.feedback {
+  position: fixed;
+  inset: 0;
+  background: #fff; /* 黒から白背景へ */
+  display: none;
+  z-index: 1000;
+}
+.feedback[hidden] { display: none; }
+.feedback:not([hidden]) { display: grid; place-items: center; }
+.feedback-content { display: grid; gap: 16px; justify-items: center; padding: var(--gutter); }
+.feedback-content canvas, .feedback-body canvas {
+  width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048));
+  height: auto;
+  background: #fff;
+  border-radius: 10px;
+}
+/* スタック表示（AとBを重ねて表示） */
+.feedback-body .stack {
+  position: relative;
+  width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048));
+  aspect-ratio: 1448 / 2048;
+}
+.feedback-body .stack canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+#fbA { opacity: 0.5; background: #fff; filter: grayscale(100%); }
+#fbB { background: transparent; mix-blend-mode: multiply; }
+/* フィードバック操作ボタンは画面上部に固定 */
+.feedback-ctrls, .feedback-toolbar {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 0 var(--gutter);
+  z-index: 1001;
+}
+
+/* 方向によって並びを変更（JSはサイズ計算のみ）*/
+@media (orientation: portrait) {
+  .workspace { flex-direction: column; }
+}
+@media (orientation: landscape) {
+  .workspace { flex-direction: row; }
+}
