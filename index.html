@@ -4,9 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimum-scale=1" />
     <title>iPad作画練習（ブラウザ版）</title>
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="作画練習" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div id="appRoot">
     <header class="topbar">
       <div class="timer">
         <div class="timer-bar-row">
@@ -25,34 +32,46 @@
         </div>
       </div>
       <div class="controls">
-        <label class="file-btn">
-          参照画像を選択
-          <input type="file" id="refFile" accept="image/*" />
-        </label>
-        <label>
-          グリッド
-          <select id="gridDiv">
-            <option value="0">なし</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5" selected>5</option>
-            <option value="6">6</option>
-          </select>
-        </label>
-        <label>
-          補助グリッド
-          <input type="checkbox" id="subGrid" />
-        </label>
-        <label>
-          グリッド太さ
-          <input type="range" id="gridWidth" min="1" max="8" step="1" value="4" />
-        </label>
-        <label>
-          ペン太さ
-          <input type="range" id="penSize" min="1" max="12" value="3" />
-        </label>
-        <button id="clearBtn">描画エリア全消し</button>
+        <div class="controls-left">
+          <label class="file-btn">
+            参照画像を選択
+            <input type="file" id="refFile" accept="image/*" />
+          </label>
+          <label>
+            グリッド
+            <select id="gridDiv">
+              <option value="0">なし</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+            </select>
+          </label>
+          <label>
+            補助グリッド
+            <input type="checkbox" id="subGrid" />
+          </label>
+          <label>
+            グリッド太さ
+            <input type="range" id="gridWidth" min="1" max="8" step="1" value="4" />
+          </label>
+        </div>
+        <div class="controls-right">
+          <label>
+            ペン太さ
+            <input type="range" id="penSize" min="1" max="12" value="3" />
+          </label>
+          <label>
+            消しゴム太さ
+            <input type="range" id="eraserSize" min="1" max="72" step="1" />
+          </label>
+          <div class="tool-buttons big">
+            <button id="penBtn" class="active">ペン</button>
+            <button id="eraserBtn">消しゴム</button>
+          </div>
+          <button id="clearBtn">描画エリア全消し</button>
+        </div>
       </div>
     </header>
 
@@ -89,6 +108,29 @@
       </div>
     </section>
 
+    <!-- ズーム検知オーバーレイ -->
+    <div id="zoomGuard" class="zoom-guard" hidden>
+      <div class="zoom-card">
+        <div class="zoom-title">ページの倍率が変更されています</div>
+        <p class="zoom-desc">
+          Safari の aA メニューから「100%」に戻してください。<br />
+          それでも戻らない場合は、下のボタンで復帰を試してください。
+        </p>
+        <div class="zoom-actions">
+          <button id="zoomFixBtn">倍率を復帰（試す）</button>
+          <button id="zoomDismissBtn">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    </div>
     <script src="app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(console.error);
+        });
+      }
+    </script>
   </body>
   </html>

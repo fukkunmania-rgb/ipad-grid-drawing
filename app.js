@@ -31,6 +31,9 @@
   const gridWidthInput = document.getElementById('gridWidth');
   const subGridCheckbox = document.getElementById('subGrid');
   const refGrayCb = document.getElementById('refGray');
+  const penBtn = document.getElementById('penBtn');
+  const eraserBtn = document.getElementById('eraserBtn');
+  const eraserSize = document.getElementById('eraserSize');
   const penSize = document.getElementById('penSize');
   const clearBtn = document.getElementById('clearBtn');
   const lockedMsg = document.getElementById('lockedMsg');
@@ -59,6 +62,7 @@
   let aOpacity = (aOpacityInput ? parseInt(aOpacityInput.value, 10) : 35) / 100; // 0..1
   let showSubGrid = !!(subGridCheckbox && subGridCheckbox.checked);
   let refGray = !!(refGrayCb && refGrayCb.checked);
+  let tool = 'pen'; // 'pen' | 'eraser'
 
   // タイマー
   let timerId = null;
@@ -76,8 +80,9 @@
     const vh = window.innerHeight;
     const gutter = Math.min(vw, vh) * 0.05;
     const timerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--timer-height')) || 84;
+    const safeBottom = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
     const availW = vw - gutter * 2;
-    const availH = vh - gutter * 2 - timerH;
+    const availH = vh - gutter * 2 - timerH - safeBottom;
     const landscape = vw >= vh;
     let w, h;
     if (landscape) {
@@ -231,13 +236,23 @@
   function penDown(px, py) {
     if (locked) return;
     drawing = true;
+    // 描画中は全体を非インタラクティブ化（誤ズーム防止）
+    document.documentElement.classList.add('drawing');
     lastX = px; lastY = py;
-    const w = clamp(parseInt(penSize ? penSize.value : '3', 10) || 3, 1, 64);
+    const penW = clamp(parseInt(penSize ? penSize.value : '3', 10) || 3, 1, 64);
+    const eraseW = clamp(parseInt(eraserSize ? eraserSize.value : String(penW*3), 10) || penW*3, 1, 128);
     ctxB.save();
-    ctxB.fillStyle = '#000';
-    ctxB.beginPath();
-    ctxB.arc(px, py, w / 2, 0, Math.PI * 2);
-    ctxB.fill();
+    if (tool === 'eraser') {
+      ctxB.globalCompositeOperation = 'destination-out';
+      ctxB.beginPath();
+      ctxB.arc(px, py, eraseW / 2, 0, Math.PI * 2);
+      ctxB.fill();
+    } else {
+      ctxB.fillStyle = '#000';
+      ctxB.beginPath();
+      ctxB.arc(px, py, penW / 2, 0, Math.PI * 2);
+      ctxB.fill();
+    }
     ctxB.restore();
   }
   function penMove(px, py) {
@@ -245,16 +260,30 @@
     ctxB.save();
     ctxB.lineCap = 'round';
     ctxB.lineJoin = 'round';
-    ctxB.strokeStyle = '#000';
-    ctxB.lineWidth = clamp(parseInt(penSize ? penSize.value : '3', 10) || 3, 1, 64);
-    ctxB.beginPath();
-    ctxB.moveTo(lastX, lastY);
-    ctxB.lineTo(px, py);
-    ctxB.stroke();
+    if (tool === 'eraser') {
+      const w = clamp(parseInt(eraserSize ? eraserSize.value : String((parseInt(penSize?.value||'3',10)||3)*3), 10) || 9, 1, 128);
+      ctxB.globalCompositeOperation = 'destination-out';
+      ctxB.lineWidth = w;
+      ctxB.beginPath();
+      ctxB.moveTo(lastX, lastY);
+      ctxB.lineTo(px, py);
+      ctxB.stroke();
+    } else {
+      const w = clamp(parseInt(penSize ? penSize.value : '3', 10) || 3, 1, 64);
+      ctxB.globalCompositeOperation = 'source-over';
+      ctxB.strokeStyle = '#000';
+      ctxB.lineWidth = w;
+      ctxB.beginPath();
+      ctxB.moveTo(lastX, lastY);
+      ctxB.lineTo(px, py);
+      ctxB.stroke();
+    }
     ctxB.restore();
     lastX = px; lastY = py;
   }
   function penUp() { drawing = false; }
+  const endDrawing = () => { drawing = false; document.documentElement.classList.remove('drawing'); };
+  // 既存呼び出し箇所を拡張
 
   // タイマー
   function setStartBtnLabel() {
@@ -418,15 +447,15 @@
   function handlePointerUp(ev) {
     if (ev.pointerType && ev.pointerType !== 'pen') return;
     ev.preventDefault(); ev.stopPropagation();
-    penUp();
+    penUp(); endDrawing();
     try { canvasB.releasePointerCapture && canvasB.releasePointerCapture(ev.pointerId); } catch (_) {}
   }
   canvasB.addEventListener('pointerdown', handlePointerDown, { passive: false });
   window.addEventListener('pointermove', handlePointerMove, { passive: false });
   window.addEventListener('pointerup', handlePointerUp, { passive: false });
   window.addEventListener('pointercancel', handlePointerUp, { passive: false });
-  window.addEventListener('pointerleave', handlePointerUp, { passive: false });
-  window.addEventListener('pointerout', handlePointerUp, { passive: false });
+  window.addEventListener('pointerleave', (e)=>{ handlePointerUp(e); }, { passive: false });
+  window.addEventListener('pointerout', (e)=>{ handlePointerUp(e); }, { passive: false });
 
   // UIイベント
   if (startBtn) startBtn.addEventListener('click', () => {
@@ -459,6 +488,19 @@
     drawCanvasA();
     if (!feedbackSec.hidden) renderFeedbackOverlay();
   });
+  // ツール切替とサイズ
+  function setTool(next) {
+    tool = next;
+    if (penBtn) penBtn.classList.toggle('active', tool === 'pen');
+    if (eraserBtn) eraserBtn.classList.toggle('active', tool === 'eraser');
+  }
+  if (penBtn) penBtn.addEventListener('click', () => setTool('pen'));
+  if (eraserBtn) eraserBtn.addEventListener('click', () => setTool('eraser'));
+  // 初期の消しゴムサイズはペンの3倍
+  if (eraserSize && penSize) {
+    const initW = clamp((parseInt(penSize.value, 10) || 3) * 3, 1, 128);
+    if (!eraserSize.value) eraserSize.value = String(initW);
+  }
   if (clearBtn) clearBtn.addEventListener('click', clearCanvasB);
   if (refFile) refFile.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
@@ -486,6 +528,22 @@
   let lastTapTs = 0;
   const isInteractive = (el) => !!(el && el.closest && el.closest('input, select, textarea, button, a, label'));
   const inWorkspace = (el) => !!(el && el.closest && (el.closest('.workspace') || el.closest('.feedback')));
+  // 画面のどの座標が「ボタンの無い描画エリア以下」かを座標で判定
+  const getBlockTopY = () => {
+    const ws = document.getElementById('workspace');
+    if (!ws) return 0;
+    const r = ws.getBoundingClientRect();
+    return r.top; // これ以降（下側）はタッチ無効領域
+  };
+  const isBelowControlsByPointer = (e) => {
+    const y = (typeof e.clientY === 'number') ? e.clientY : 0;
+    return y >= getBlockTopY();
+  };
+  const isBelowControlsByTouch = (e) => {
+    const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+    if (!t) return false;
+    return t.clientY >= getBlockTopY();
+  };
   const doubleTapBlocker = (e) => {
     // 入力系はスルー（数値入力やスライダーの操作を阻害しない）
     if (isInteractive(e.target)) return;
@@ -505,20 +563,88 @@
   document.addEventListener('pointerup', doubleTapBlocker, { passive: false, capture: true });
 
   // 非ペンのタッチはワークスペースでは全面ブロック（厳格パームリジェクション）
+  // 非ペンのタッチは、workspace領域内だけでなく「その下に広がる領域」も完全に無効化
   document.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'touch' && inWorkspace(e.target) && !isInteractive(e.target)) {
+    if (e.pointerType === 'touch' && !isInteractive(e.target) && (inWorkspace(e.target) || isBelowControlsByPointer(e))) {
       e.preventDefault(); e.stopPropagation();
     }
   }, { passive: false, capture: true });
   document.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch' && inWorkspace(e.target) && !isInteractive(e.target)) {
+    if (e.pointerType === 'touch' && !isInteractive(e.target) && (inWorkspace(e.target) || isBelowControlsByPointer(e))) {
       e.preventDefault(); e.stopPropagation();
     }
   }, { passive: false, capture: true });
 
+  // 2本指以上のタッチは常にキャンセル（ピンチズームの発火源）
+  const cancelMultiTouch = (e) => {
+    if (e.touches && e.touches.length > 1) { e.preventDefault(); e.stopPropagation(); return; }
+    // 1本指でも、workspace開始位置より下の領域は全面無効化（ボタンのない描画エリア以下）
+    if (isBelowControlsByTouch(e) && !isInteractive(e.target)) { e.preventDefault(); e.stopPropagation(); }
+  };
+  document.addEventListener('touchstart', cancelMultiTouch, { passive: false, capture: true });
+  document.addEventListener('touchmove', cancelMultiTouch, { passive: false, capture: true });
+  // トラックパッドのCtrl+Wheel拡大もキャンセル
+  window.addEventListener('wheel', (e) => { if (e.ctrlKey) { e.preventDefault(); e.stopPropagation(); } }, { passive: false, capture: true });
+
+  // ズーム検知オーバーレイ（aAページズームに気付きやすく）
+  const zoomGuard = document.getElementById('zoomGuard');
+  const zoomFixBtn = document.getElementById('zoomFixBtn');
+  const zoomDismissBtn = document.getElementById('zoomDismissBtn');
+  function showZoomGuard() { if (zoomGuard) zoomGuard.hidden = false; }
+  function hideZoomGuard() { if (zoomGuard) zoomGuard.hidden = true; }
+  const metaViewport = document.querySelector('meta[name="viewport"]');
+  function resetViewport() {
+    if (!metaViewport) return;
+    const content = 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimum-scale=1';
+    metaViewport.setAttribute('content', content);
+  }
+  if (zoomFixBtn) zoomFixBtn.addEventListener('click', () => { resetViewport(); setTimeout(hideZoomGuard, 120); });
+  if (zoomDismissBtn) zoomDismissBtn.addEventListener('click', hideZoomGuard);
+
+  // 逆スケーリングで見かけ上100%に戻す（PWAでズームが残る場合の保険）
+  const appRoot = document.getElementById('appRoot');
+  function applyInverseScale(scaleVal) {
+    if (!appRoot) return;
+    const s = Number(scaleVal) || 1;
+    if (Math.abs(s - 1) < 0.01) {
+      appRoot.style.transform = '';
+      appRoot.style.width = '';
+      appRoot.style.height = '';
+      return;
+    }
+    const inv = (1 / s);
+    appRoot.style.transform = `scale(${inv})`;
+    appRoot.style.width = `${s * 100}%`;
+    appRoot.style.height = `${s * 100}%`;
+  }
+
+  if (window.visualViewport) {
+    let zoomTimer = null;
+    const onVVChange = () => {
+      try {
+        const vv = window.visualViewport;
+        const s = vv && vv.scale ? vv.scale : 1;
+        if (Math.abs(s - 1) > 0.01) {
+          showZoomGuard();
+          applyInverseScale(s);
+          if (zoomTimer) clearTimeout(zoomTimer);
+          zoomTimer = setTimeout(() => { resetViewport(); }, 350);
+        } else {
+          hideZoomGuard();
+          applyInverseScale(1);
+        }
+      } catch (_) {}
+    };
+    window.visualViewport.addEventListener('resize', onVVChange);
+    window.visualViewport.addEventListener('scroll', onVVChange);
+    window.addEventListener('pageshow', onVVChange);
+    // 初期チェック
+    setTimeout(onVVChange, 0);
+  }
+
   // タブ切替や画面遷移などでも安全に終了
-  window.addEventListener('blur', () => { drawing = false; });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) drawing = false; });
+  window.addEventListener('blur', () => { endDrawing(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) endDrawing(); });
 
   // 初期化
   function init() {

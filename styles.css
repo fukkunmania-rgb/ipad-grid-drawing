@@ -1,14 +1,20 @@
-﻿:root {
-  --gutter: 5vmin; /* ガター間隔（上下左右の余白）を5vminに設定 */
+:root {
+  --gutter: 5vmin; /* 画面全体の余白（vmin基準で5%相当） */
   --bg: #0a0a0a;
   --white: #ffffff;
   --muted: #c8c8c8;
   --accent: #3ba0ff;
-  --timer-height: 84px; /* タイマーの高さ（上部バーの高さ） */
+  --timer-height: 84px; /* タイマー行（プログレス＋操作行）の想定高さ */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overscroll-behavior: none; touch-action: none; }
+/* ルートラッパ（ズーム補正で逆変換を当てるための容器） */
+#appRoot { width: 100%; height: 100%; transform-origin: top left; }
+/* 描画中は全体を厳格に非インタラクティブ化（指タッチの誤爆を根絶） */
+html.drawing, html.drawing body, html.drawing #appRoot, html.drawing .workspace { touch-action: none !important; }
+/* 描画中は上部UIもタッチ不可（Pencil描画に集中） */
+html.drawing .topbar, html.drawing .controls, html.drawing .feedback-toolbar { pointer-events: none; }
 body {
   margin: 0;
   background: var(--bg);
@@ -16,201 +22,96 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
   padding: env(safe-area-inset-top) var(--gutter) env(safe-area-inset-bottom) var(--gutter);
   user-select: none;
-  -webkit-user-select: none; /* iOS繝・く繧ｹ繝磯∈謚樊椛豁｢ */
-  -webkit-touch-callout: none; /* 髟ｷ謚ｼ縺励・繧ｳ繝ｼ繝ｫ繧｢繧ｦ繝育┌蜉ｹ蛹・*/
+  -webkit-user-select: none; /* iOSのテキスト選択を無効化 */
+  -webkit-touch-callout: none; /* 長押しのコールアウトを無効化 */
 }
 body.freeze { position: fixed; width: 100%; }
 
-.topbar {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  margin-bottom: var(--gutter);
-}
-
-.progress-wrap {
-  width: 100%;
-  height: 12px;
-  background: #222;
-  border-radius: 6px;
-  overflow: visible; /* ラベルを外側に表示するため */
-}
-.progress {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #2ecc71, #f1c40f, #e67e22, #e74c3c);
-  transition: width 0.1s linear;
-}
-
-.time-ctrls, .controls, .feedback-ctrls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.controls { justify-content: flex-start; }
-.time-ctrls { justify-content: space-between; }
-/* フォーム系は操作を許可（ダブルタップズームは抑止されるが操作は可能）*/
+/* 上部エリア */
+.topbar { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: var(--gutter); }
 .topbar, .controls, .feedback-toolbar { touch-action: manipulation; }
 
-label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
-input[type="number"], select, input[type="range"] {
-  background: #151515;
-  color: var(--white);
-  border: 1px solid #2a2a2a;
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-button, .file-btn {
-  background: #1e1e1e;
-  color: var(--white);
-  border: 1px solid #333;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-button:hover, .file-btn:hover { border-color: var(--accent); }
+/* プログレスバー */
+.timer-bar-row { display: flex; align-items: center; gap: 12px; }
+.progress-wrap { width: 100%; height: 16px; background: #222; border-radius: 6px; overflow: visible; }
+.progress { height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #f1c40f, #e67e22, #e74c3c); transition: width 0.1s linear; }
+.countdown { min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; height: 16px; line-height: 16px; }
 
-.file-btn { position: relative; overflow: visible; /* ラベルを外側に表示するため */ }
+.time-ctrls, .controls, .feedback-ctrls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.controls { justify-content: space-between; align-items: flex-start; }
+.controls-left, .controls-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.controls-right { justify-content: flex-end; }
+.time-ctrls { justify-content: space-between; }
+
+label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+input[type="number"], select, input[type="range"] { background: #151515; color: var(--white); border: 1px solid #2a2a2a; padding: 6px 8px; border-radius: 6px; }
+/* iOSのフォーカス時自動ズームを避けるため16px以上を保証 */
+input, select, button { font-size: 16px; }
+button, .file-btn { background: #1e1e1e; color: var(--white); border: 1px solid #333; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+button:hover, .file-btn:hover { border-color: var(--accent); }
+.file-btn { position: relative; overflow: visible; }
 .file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-.workspace {
-  display: flex;
-  gap: var(--gutter);
-  width: 100%;
-  height: calc(100vh - var(--gutter) * 2 - var(--timer-height));
-  justify-content: center;
-  align-items: center;
-}
+/* 作業スペース */
+.workspace { display: flex; gap: var(--gutter); width: 100%; height: calc(100vh - var(--gutter) * 2 - var(--timer-height) - env(safe-area-inset-bottom)); justify-content: center; align-items: center; }
 
-/* 蜷・・繧､繝ｳ縺ｮ隕九◆逶ｮ */
-.pane {
-  position: relative;
-  background: #111;
-  border-radius: 10px;
-  overflow: visible; /* ラベルを外側に表示するため */
-  /* JS縺ｧ蟷・・鬮倥＆縺ｯ隱ｿ謨ｴ縲∵ｯ皮紫縺ｯA4邵ｦ */
-  aspect-ratio: 1448 / 2048;
-}
-.pane, .pane canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none; /* Apple Pencil蜷代￠・医せ繧ｯ繝ｭ繝ｼ繝ｫ謚第ｭ｢・・*/
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-/* 螳滓緒逕ｻ繧ｭ繝｣繝ｳ繝舌せ縺ｮ縺ｿ逋ｽ閭梧勹縲ゅげ繝ｪ繝・ラ繝ｬ繧､繝､縺ｯ騾乗・縺ｫ縺吶ｋ */
+/* ペイン（キャンバス） */
+.pane { position: relative; background: #111; border-radius: 10px; overflow: visible; aspect-ratio: 1448 / 2048; }
+.pane, .pane canvas { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* 実描画キャンバスのみ白背景。グリッドレイヤは透明 */
 #canvasA, #canvasB { background: var(--white); }
 .pane { touch-action: none; }
 .grid-layer { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent !important; pointer-events: none; }
 
-/* 繧ｭ繝｣繝ｳ繝舌せ繝ｩ繝吶Ν */
-.pane-label {
-  position: absolute;
-  top: -28px; /* キャンバスの外側 */
-  left: 10px;
-  z-index: 5;
-  pointer-events: none;
-  user-select: none;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  padding: 6px 10px;
-  border-radius: 999px;
-}
+/* キャンバスラベル */
+.pane-label { position: absolute; top: -28px; left: 10px; z-index: 5; pointer-events: none; user-select: none; background: rgba(0,0,0,0.55); color: #fff; font-size: 12px; line-height: 1; letter-spacing: 0.02em; padding: 6px 10px; border-radius: 999px; }
 #paneB .pane-label { left: auto; right: 10px; }
 
-.overlay-msg {
-  position: absolute;
-  left: 0; right: 0; top: 0; bottom: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(0,0,0,0.35);
-  font-weight: 600;
-}
+.overlay-msg { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: grid; place-items: center; background: rgba(0,0,0,0.35); font-weight: 600; }
 .overlay-msg[hidden] { display: none !important; }
 
-/* 繝輔ぅ繝ｼ繝峨ヰ繝・け縺ｯ蜈ｨ逕ｻ髱｢繧ｪ繝ｼ繝舌・繝ｬ繧､ */
-.feedback {
-  position: fixed;
-  inset: 0;
-  background: #fff; /* 鮟偵°繧臥區閭梧勹縺ｸ */
-  display: none;
-  z-index: 1000;
-}
+/* フィードバック（重ね確認） */
+.feedback { position: fixed; inset: 0; background: #fff; display: none; z-index: 1000; }
 .feedback[hidden] { display: none; }
 .feedback:not([hidden]) { display: grid; place-items: center; }
 .feedback-content { display: grid; gap: 16px; justify-items: center; padding: var(--gutter); }
-.feedback-content canvas, .feedback-body canvas {
-  width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048));
-  height: auto;
-  background: #fff;
-  border-radius: 10px;
-}
-/* 繧ｹ繧ｿ繝・け陦ｨ遉ｺ・・縺ｨB繧帝㍾縺ｭ縺ｦ陦ｨ遉ｺ・・*/
-.feedback-body .stack {
-  position: relative;
-  width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048));
-  aspect-ratio: 1448 / 2048;
-}
-.feedback-body .stack canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 10px;
-}
+.feedback-content canvas, .feedback-body canvas { width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048)); height: auto; background: #fff; border-radius: 10px; }
+.feedback-body .stack { position: relative; width: min(100vw - 2*var(--gutter), (100vh - 3*var(--gutter)) * (1448/2048)); aspect-ratio: 1448 / 2048; }
+.feedback-body .stack canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; }
 #fbA { opacity: 0.35; background: #fff; }
 #fbB { background: transparent; mix-blend-mode: multiply; }
-/* フィードバック全体もズームを起こさない */
 .feedback { touch-action: none; }
-/* タイマーバーとカウントダウンを同列・同高さに */
-.timer-bar-row { display: flex; align-items: center; gap: 12px; }
-.progress-wrap { height: 16px; }
-.countdown { min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; height: 16px; line-height: 16px; }
-/* 主要アクション（スタート/ギブアップ）を大きく */
+
+/* 主要アクション（スタート／ギブアップ） */
 #startBtn, #giveUpBtn { font-size: 16px; padding: 10px 18px; height: 42px; border-width: 2px; }
 #startBtn { border-color: #2ecc71; }
 #giveUpBtn { border-color: #e67e22; }
-/* 繝輔ぅ繝ｼ繝峨ヰ繝・け謫堺ｽ懊・繧ｿ繝ｳ縺ｯ逕ｻ髱｢荳企Κ縺ｫ蝗ｺ螳・*/
-.feedback-ctrls, .feedback-toolbar {
-  position: fixed;
-  top: calc(env(safe-area-inset-top) + 8px);
-  left: 0; right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  padding: 0 var(--gutter);
-  z-index: 1001;
-}
 
-/* 譁ｹ蜷代↓繧医▲縺ｦ荳ｦ縺ｳ繧貞､画峩・・S縺ｯ繧ｵ繧､繧ｺ險育ｮ励・縺ｿ・・/
-@media (orientation: portrait) {
-  .workspace { flex-direction: column; }
-}
-@media (orientation: landscape) {
-  .workspace { flex-direction: row; }
-}
+/* ズーム検知オーバーレイ */
+.zoom-guard[hidden] { display: none; }
+.zoom-guard { position: fixed; inset: 0; z-index: 2000; touch-action: none; background: rgba(0,0,0,0.55); display: grid; place-items: center; }
+.zoom-card { width: min(520px, calc(100vw - 40px)); background: #111; color: #fff; border: 1px solid #444; border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.zoom-title { font-weight: 700; margin-bottom: 8px; }
+.zoom-desc { margin: 0 0 12px 0; color: var(--muted); }
+.zoom-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.zoom-actions button { padding: 8px 12px; border-radius: 8px; }
+.zoom-actions #zoomFixBtn { border-color: var(--accent); }
+
+/* ツール切替（ペン／消しゴム） */
+.tool-buttons { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#penBtn, #eraserBtn { font-weight: 600; }
+.tool-buttons button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tool-buttons.big #penBtn,
+.tool-buttons.big #eraserBtn { font-size: 18px; padding: 10px 22px; height: 46px; border-width: 2px; }
+
+/* フィードバック操作ボタンは画面上部に固定 */
+.feedback-ctrls, .feedback-toolbar { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; padding: 0 var(--gutter); z-index: 1001; }
+
+/* 方向の違いで並びを変更（縦は列、横は行） */
+@media (orientation: portrait) { .workspace { flex-direction: column; } }
+@media (orientation: landscape) { .workspace { flex-direction: row; } }
+
 /* 参照キャンバス用ツール（グレースケール切替） */
-.pane-toolbox {
-  position: absolute;
-  top: -28px; /* Referenceラベルの下辺と揃える（キャンバス外） */
-  left: 120px; /* Referenceラベルの右側に配置 */
-  z-index: 6;
-  background: transparent; /* 縁取り・背景なし */
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-  padding: 0; /* 余白も除去 */
-  border: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+.pane-toolbox { position: absolute; top: -28px; left: 120px; z-index: 6; background: transparent; color: #fff; font-size: 12px; line-height: 1; padding: 0; border: 0; display: inline-flex; align-items: center; gap: 6px; }
 .pane#paneA, #paneA { overflow: visible; }
 .pane-toolbox input[type="checkbox"] { width: 18px; height: 18px; }
-
