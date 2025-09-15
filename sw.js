@@ -1,12 +1,13 @@
 // Basic service worker for offline-first static assets
-const CACHE_VERSION = 'pwa-sketch-v1';
+const CACHE_VERSION = 'pwa-sketch-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './manifest-fixed.webmanifest'
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,4 +53,3 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
-

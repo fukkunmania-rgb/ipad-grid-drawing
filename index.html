@@ -14,114 +14,114 @@
   </head>
   <body>
     <div id="appRoot">
-    <header class="topbar">
-      <div class="timer">
-        <div class="timer-bar-row">
-          <div class="progress-wrap">
-            <div class="progress" id="progress"></div>
+      <header class="topbar">
+        <div class="timer">
+          <div class="timer-bar-row">
+            <div class="progress-wrap">
+              <div class="progress" id="progress"></div>
+            </div>
+            <div class="countdown"><span id="remain">60</span> 秒</div>
           </div>
-          <div class="countdown"><span id="remain">60</span> 秒</div>
-        </div>
-        <div class="time-ctrls">
-          <label>
-            制限時間(秒)
-            <input type="number" id="duration" min="10" max="3600" step="10" value="60" inputmode="numeric" />
-          </label>
-          <button id="startBtn" data-state="idle">スタート</button>
-          <button id="giveUpBtn">ギブアップ</button>
-        </div>
-      </div>
-      <div class="controls">
-        <div class="controls-left">
-          <label class="file-btn">
-            参照画像を選択
-            <input type="file" id="refFile" accept="image/*" />
-          </label>
-          <label>
-            グリッド
-            <select id="gridDiv">
-              <option value="0">なし</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5" selected>5</option>
-              <option value="6">6</option>
-            </select>
-          </label>
-          <label>
-            補助グリッド
-            <input type="checkbox" id="subGrid" />
-          </label>
-          <label>
-            グリッド太さ
-            <input type="range" id="gridWidth" min="1" max="8" step="1" value="4" />
-          </label>
-        </div>
-        <div class="controls-right">
-          <label>
-            ペン太さ
-            <input type="range" id="penSize" min="1" max="12" value="3" />
-          </label>
-          <label>
-            消しゴム太さ
-            <input type="range" id="eraserSize" min="1" max="72" step="1" />
-          </label>
-          <div class="tool-buttons big">
-            <button id="penBtn" class="active">ペン</button>
-            <button id="eraserBtn">消しゴム</button>
+          <div class="time-ctrls">
+            <label>
+              制限時間（秒）
+              <input type="number" id="duration" min="10" max="3600" step="10" value="60" inputmode="numeric" />
+            </label>
+            <button id="startBtn" data-state="idle">スタート</button>
+            <button id="giveUpBtn">ギブアップ</button>
           </div>
-          <button id="clearBtn">描画エリア全消し</button>
         </div>
-      </div>
-    </header>
+        <div class="controls">
+          <div class="controls-left">
+            <label class="file-btn">
+              参照画像を選択
+              <input type="file" id="refFile" accept="image/*" />
+            </label>
+            <label>
+              グリッド
+              <select id="gridDiv">
+                <option value="0">なし</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5" selected>5</option>
+                <option value="6">6</option>
+              </select>
+            </label>
+            <label>
+              補助グリッド
+              <input type="checkbox" id="subGrid" />
+            </label>
+            <label>
+              グリッド太さ
+              <input type="range" id="gridWidth" min="1" max="8" step="1" value="4" />
+            </label>
+          </div>
+          <div class="controls-right">
+            <label>
+              ペン太さ
+              <input type="range" id="penSize" min="1" max="12" value="3" />
+            </label>
+            <label>
+              消しゴム太さ
+              <input type="range" id="eraserSize" min="1" max="72" step="1" />
+            </label>
+            <div class="tool-buttons big">
+              <button id="penBtn" class="active">ペン</button>
+              <button id="eraserBtn">消しゴム</button>
+            </div>
+            <button id="clearBtn">描画エリア全消し</button>
+          </div>
+        </div>
+      </header>
 
-    <main class="workspace" id="workspace">
-      <section class="pane" id="paneA" aria-label="参照キャンバス">
-        <div class="pane-toolbox">
-          <label><input type="checkbox" id="refGray" /> グレースケール</label>
+      <main class="workspace" id="workspace">
+        <section class="pane" id="paneA" aria-label="参照キャンバス">
+          <div class="pane-toolbox">
+            <label><input type="checkbox" id="refGray" /> グレースケール</label>
+          </div>
+          <canvas id="canvasA" width="1448" height="2048"></canvas>
+          <div class="pane-label" aria-hidden="true">Reference</div>
+        </section>
+        <section class="pane" id="paneB" aria-label="描画キャンバス">
+          <canvas id="canvasB" width="1448" height="2048"></canvas>
+          <canvas id="gridB" width="1448" height="2048" class="grid-layer"></canvas>
+          <div class="overlay-msg" id="lockedMsg" hidden>タイムアップ。描画は終了しました</div>
+          <div class="pane-label" aria-hidden="true">Draw</div>
+        </section>
+      </main>
+
+      <section class="feedback" id="feedback" hidden aria-modal="true" role="dialog">
+        <div class="feedback-toolbar">
+          <label class="opacity-ctrl">リファレンス透過度
+            <input type="range" id="aOpacity" min="0" max="100" step="1" value="35" />
+          </label>
+          <button id="saveBtn">縮小PNG保存（縦720px）</button>
+          <button id="resetBtn">リセットして再開</button>
         </div>
-        <canvas id="canvasA" width="1448" height="2048"></canvas>
-        <div class="pane-label" aria-hidden="true">Reference</div>
+        <div class="feedback-body">
+          <div class="stack">
+            <canvas id="fbA" width="1448" height="2048"></canvas>
+            <canvas id="fbB" width="1448" height="2048"></canvas>
+          </div>
+          <canvas id="composite" width="1448" height="2048" style="display:none"></canvas>
+        </div>
       </section>
-      <section class="pane" id="paneB" aria-label="描画キャンバス">
-        <canvas id="canvasB" width="1448" height="2048"></canvas>
-        <canvas id="gridB" width="1448" height="2048" class="grid-layer"></canvas>
-        <div class="overlay-msg" id="lockedMsg" hidden>タイムアップ：描画は終了しました</div>
-        <div class="pane-label" aria-hidden="true">Draw</div>
-      </section>
-    </main>
 
-    <section class="feedback" id="feedback" hidden aria-modal="true" role="dialog">
-      <div class="feedback-toolbar">
-        <label class="opacity-ctrl">リファレンス透明度
-          <input type="range" id="aOpacity" min="0" max="100" step="1" value="35" />
-        </label>
-        <button id="saveBtn">縮小PNG保存（縦720px）</button>
-        <button id="resetBtn">リセットして再開</button>
-      </div>
-      <div class="feedback-body">
-        <div class="stack">
-          <canvas id="fbA" width="1448" height="2048"></canvas>
-          <canvas id="fbB" width="1448" height="2048"></canvas>
-        </div>
-        <canvas id="composite" width="1448" height="2048" style="display:none"></canvas>
-      </div>
-    </section>
-
-    <!-- ズーム検知オーバーレイ -->
-    <div id="zoomGuard" class="zoom-guard" hidden>
-      <div class="zoom-card">
-        <div class="zoom-title">ページの倍率が変更されています</div>
-        <p class="zoom-desc">
-          Safari の aA メニューから「100%」に戻してください。<br />
-          それでも戻らない場合は、下のボタンで復帰を試してください。
-        </p>
-        <div class="zoom-actions">
-          <button id="zoomFixBtn">倍率を復帰（試す）</button>
-          <button id="zoomDismissBtn">閉じる</button>
+      <!-- ズーム検知オーバーレイ -->
+      <div id="zoomGuard" class="zoom-guard" hidden>
+        <div class="zoom-card">
+          <div class="zoom-title">ページの倍率が変更されています</div>
+          <p class="zoom-desc">
+            Safari の aA メニューから「100%」に戻してください。<br />
+            それでも戻らない場合は、下のボタンで復帰を試してください。
+          </p>
+          <div class="zoom-actions">
+            <button id="zoomFixBtn">倍率を復帰（試す）</button>
+            <button id="zoomDismissBtn">閉じる</button>
+          </div>
         </div>
       </div>
-    </div>
 
     </div>
     <script src="app.js"></script>
@@ -134,3 +134,4 @@
     </script>
   </body>
   </html>
+

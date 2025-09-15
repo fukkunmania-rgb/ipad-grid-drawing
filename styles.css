@@ -1,5 +1,5 @@
 :root {
-  --gutter: 5vmin; /* 画面全体の余白（vmin基準で5%相当） */
+  --gutter: 5vmin; /* 画面全体の余白。vmin基準で約5% */
   --bg: #0a0a0a;
   --white: #ffffff;
   --muted: #c8c8c8;
@@ -9,12 +9,13 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overscroll-behavior: none; touch-action: none; }
-/* ルートラッパ（ズーム補正で逆変換を当てるための容器） */
+/* ルートラッパ。ズーム補正用のコンテナ */
 #appRoot { width: 100%; height: 100%; transform-origin: top left; }
-/* 描画中は全体を厳格に非インタラクティブ化（指タッチの誤爆を根絶） */
+/* 描画中は全体を非インタラクティブ化（誤タップ防止） */
 html.drawing, html.drawing body, html.drawing #appRoot, html.drawing .workspace { touch-action: none !important; }
-/* 描画中は上部UIもタッチ不可（Pencil描画に集中） */
+/* 描画中は上部UIもタッチ不可（Pencil描画に専念） */
 html.drawing .topbar, html.drawing .controls, html.drawing .feedback-toolbar { pointer-events: none; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -45,7 +46,7 @@ body.freeze { position: fixed; width: 100%; }
 
 label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
 input[type="number"], select, input[type="range"] { background: #151515; color: var(--white); border: 1px solid #2a2a2a; padding: 6px 8px; border-radius: 6px; }
-/* iOSのフォーカス時自動ズームを避けるため16px以上を保証 */
+/* iOSのフォーカス時の自動ズームを避けるため16px以上を保証 */
 input, select, button { font-size: 16px; }
 button, .file-btn { background: #1e1e1e; color: var(--white); border: 1px solid #333; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
 button:hover, .file-btn:hover { border-color: var(--accent); }
@@ -55,7 +56,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 /* 作業スペース */
 .workspace { display: flex; gap: var(--gutter); width: 100%; height: calc(100vh - var(--gutter) * 2 - var(--timer-height) - env(safe-area-inset-bottom)); justify-content: center; align-items: center; }
 
-/* ペイン（キャンバス） */
+/* ペインとキャンバス */
 .pane { position: relative; background: #111; border-radius: 10px; overflow: visible; aspect-ratio: 1448 / 2048; }
 .pane, .pane canvas { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 /* 実描画キャンバスのみ白背景。グリッドレイヤは透明 */
@@ -70,7 +71,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 .overlay-msg { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: grid; place-items: center; background: rgba(0,0,0,0.35); font-weight: 600; }
 .overlay-msg[hidden] { display: none !important; }
 
-/* フィードバック（重ね確認） */
+/* フィードバックの重ね確認 */
 .feedback { position: fixed; inset: 0; background: #fff; display: none; z-index: 1000; }
 .feedback[hidden] { display: none; }
 .feedback:not([hidden]) { display: grid; place-items: center; }
@@ -97,7 +98,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 .zoom-actions button { padding: 8px 12px; border-radius: 8px; }
 .zoom-actions #zoomFixBtn { border-color: var(--accent); }
 
-/* ツール切替（ペン／消しゴム） */
+/* ツールボタン（ペン／消しゴム） */
 .tool-buttons { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 #penBtn, #eraserBtn { font-weight: 600; }
 .tool-buttons button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -107,11 +108,12 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 /* フィードバック操作ボタンは画面上部に固定 */
 .feedback-ctrls, .feedback-toolbar { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; padding: 0 var(--gutter); z-index: 1001; }
 
-/* 方向の違いで並びを変更（縦は列、横は行） */
+/* 画面の向きに応じて並びを変更（縦は列、横は行） */
 @media (orientation: portrait) { .workspace { flex-direction: column; } }
 @media (orientation: landscape) { .workspace { flex-direction: row; } }
 
-/* 参照キャンバス用ツール（グレースケール切替） */
+/* 参照キャンバス用ツール（グレースケール） */
 .pane-toolbox { position: absolute; top: -28px; left: 120px; z-index: 6; background: transparent; color: #fff; font-size: 12px; line-height: 1; padding: 0; border: 0; display: inline-flex; align-items: center; gap: 6px; }
 .pane#paneA, #paneA { overflow: visible; }
 .pane-toolbox input[type="checkbox"] { width: 18px; height: 18px; }
+
