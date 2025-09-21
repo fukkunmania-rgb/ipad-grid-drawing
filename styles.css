@@ -96,7 +96,7 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 .zoom-desc { margin: 0 0 12px 0; color: var(--muted); }
 .zoom-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .zoom-actions button { padding: 8px 12px; border-radius: 8px; }
-.zoom-actions #zoomFixBtn { border-color: var(--accent); }
+.zoom-actions #zoomFixBtn { display: none; }
 
 /* ツールボタン（ペン／消しゴム） */
 .tool-buttons { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -116,4 +116,3 @@ button:hover, .file-btn:hover { border-color: var(--accent); }
 .pane-toolbox { position: absolute; top: -28px; left: 120px; z-index: 6; background: transparent; color: #fff; font-size: 12px; line-height: 1; padding: 0; border: 0; display: inline-flex; align-items: center; gap: 6px; }
 .pane#paneA, #paneA { overflow: visible; }
 .pane-toolbox input[type="checkbox"] { width: 18px; height: 18px; }
-

@@ -118,7 +118,7 @@
       const zoomDesc = document.querySelector('#zoomGuard .zoom-desc');
       if (zoomDesc) zoomDesc.innerHTML = 'Safari の aA メニューから「100%」に戻してください。<br />それでも戻らない場合は、下のボタンで復帰を試してください。';
       const zFix = document.getElementById('zoomFixBtn');
-      if (zFix) zFix.textContent = '倍率を復帰（試す）';
+      if (zFix) zFix.remove(); // 復帰機能は削除
       const zDismiss = document.getElementById('zoomDismissBtn');
       if (zDismiss) zDismiss.textContent = '閉じる';
     } catch (_) { /* noop */ }
@@ -534,8 +534,8 @@
   const zoomDismissBtn = document.getElementById('zoomDismissBtn');
   const zoomGuard = document.getElementById('zoomGuard');
   const metaViewport = document.querySelector('meta[name="viewport"]');
-  // Overlay visibility state; once dismissed, don't re-show in this session
-  let zoomGuardDismissed = false;
+  // Overlay visibility state; detection disabled, never show
+  let zoomGuardDismissed = true;
   function showZoomGuard(){
     if (zoomGuardDismissed) return;
     if (zoomGuard) zoomGuard.hidden = false;
@@ -545,40 +545,25 @@
     if (zoomGuard) zoomGuard.hidden = true;
     document.body.classList.remove('freeze');
   }
-  function resetViewport(){
-    if (!metaViewport) return;
-    const content = 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimum-scale=1';
-    metaViewport.setAttribute('content', content);
-  }
-  if (zoomFixBtn) zoomFixBtn.addEventListener('click', () => {
-    // Try to reset, then hide and suppress re-show for this session
-    resetViewport();
-    zoomGuardDismissed = true;
-    setTimeout(hideZoomGuard, 50);
-  });
+  // 復帰ボタンは機能削除（押せないようにDOMから除去）
+  if (zoomFixBtn) zoomFixBtn.remove();
   if (zoomDismissBtn) zoomDismissBtn.addEventListener('click', () => {
     zoomGuardDismissed = true;
     hideZoomGuard();
   });
   const appRoot = document.getElementById('appRoot');
   function applyViewportScale(s){
-    if (!appRoot) return;
-    const inv = 1 / (s || 1);
-    appRoot.style.transform = `scale(${inv})`;
-    appRoot.style.width = `${(s || 1) * 100}%`;
-    appRoot.style.height = `${(s || 1) * 100}%`;
+    // removed: no transform-based scaling
+    return;
   }
   function onVVChange(){
-    const s = (window.visualViewport && typeof window.visualViewport.scale === 'number') ? window.visualViewport.scale : 1;
-    applyViewportScale(s);
-    const shouldShow = !zoomGuardDismissed && s !== 1;
-    if (shouldShow) showZoomGuard(); else hideZoomGuard();
+    // zoom detection disabled
+    if (zoomGuard) zoomGuard.hidden = true;
+    return;
   }
   if ('visualViewport' in window){
-    window.visualViewport.addEventListener('resize', onVVChange);
-    window.visualViewport.addEventListener('scroll', onVVChange);
-    window.addEventListener('pageshow', onVVChange);
-    setTimeout(onVVChange, 0);
+    // detection disabled; ensure overlay stays hidden
+    hideZoomGuard();
   }
 
   window.addEventListener('blur', () => { endDrawing(); });
@@ -586,6 +571,9 @@
 
   function init(){
     normalizeStaticTexts();
+    // clear any previous transform-based scaling
+    const appRootEl = document.getElementById('appRoot');
+    if (appRootEl) { appRootEl.style.transform=''; appRootEl.style.width=''; appRootEl.style.height=''; }
     drawCanvasA();
     clearCanvasB();
     drawGridB();

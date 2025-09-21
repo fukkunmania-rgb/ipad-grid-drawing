@@ -1,5 +1,5 @@
 // Basic service worker for offline-first static assets
-const CACHE_VERSION = 'pwa-sketch-v3';
+const CACHE_VERSION = 'pwa-sketch-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const ASSETS = [
   './',
